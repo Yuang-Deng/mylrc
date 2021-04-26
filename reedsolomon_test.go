@@ -431,6 +431,13 @@ func testReconstruct(t *testing.T, o ...Option) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ok, err := r.Verify(shards)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("Verification failed")
+	}
 
 	// Reconstruct with 10 shards present. Use pre-allocated memory for one of them.
 	shards[0] = nil
@@ -444,7 +451,7 @@ func testReconstruct(t *testing.T, o ...Option) {
 		t.Fatal(err)
 	}
 
-	ok, err := r.Verify(shards)
+	ok, err = r.Verify(shards)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -463,15 +470,22 @@ func testReconstruct(t *testing.T, o ...Option) {
 	shards[11] = nil
 
 	err = r.Reconstruct(shards)
-	if err != ErrTooFewShards {
-		t.Errorf("expected %v, got %v", ErrTooFewShards, err)
+	if err!=nil {
+		t.Fatal(err)
 	}
 
+	ok, err = r.Verify(shards)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("Verification failed")
+	}
 	err = r.Reconstruct(make([][]byte, 1))
 	if err != ErrTooFewShards {
 		t.Errorf("expected %v, got %v", ErrTooFewShards, err)
 	}
-	err = r.Reconstruct(make([][]byte, 13))
+	err = r.Reconstruct(make([][]byte, 13+3))
 	if err != ErrShardNoData {
 		t.Errorf("expected %v, got %v", ErrShardNoData, err)
 	}

@@ -160,12 +160,12 @@ func buildMatrix(dataShards, totalShards int) (matrix, error) {
 		return vm, err
 	}
 	for c := 0; c < dataShards/2; c++ {
-		vm[totalShards-2][c] = 1
+		// vm[totalShards-2][c] = 1
 		vm[totalShards-1][c] = 0
 	}
 	for c := dataShards / 2; c < dataShards; c++ {
 		vm[totalShards-2][c] = 0
-		vm[totalShards-1][c] = 1
+		// vm[totalShards-1][c] = 1
 	}
 	return vm, nil
 }
@@ -835,7 +835,7 @@ func (r *reedSolomon) reconstructLocal1(shards [][]byte) error {
 		subShards := make([][]byte, r.DataShards/2)
 		validIndices := make([]int, r.DataShards/2)
 		outputShards := make([][]byte, 1)
-		outputCount := 1
+		outputCount := 0
 		subMatrix, err := newMatrix(r.DataShards/2, r.DataShards/2)
 		if err != nil {
 			return err
@@ -846,14 +846,15 @@ func (r *reedSolomon) reconstructLocal1(shards [][]byte) error {
 				subShards[subMatrixRow] = shards[matrixRow]
 				validIndices[subMatrixRow] = matrixRow
 				subMatrixRow++
-			} else {
-				if cap(shards[matrixRow]) >= shardSize {
-					shards[matrixRow] = shards[matrixRow][0:shardSize]
-				} else {
-					shards[matrixRow] = make([]byte, shardSize)
-				}
-				outputShards[0] = shards[matrixRow]
-			}
+			} 
+			// else {
+			// 	if cap(shards[matrixRow]) >= shardSize {
+			// 		shards[matrixRow] = shards[matrixRow][0:shardSize]
+			// 	} else {
+			// 		shards[matrixRow] = make([]byte, shardSize)
+			// 	}
+			// 	outputShards[0] = shards[matrixRow]
+			// }
 		}
 		validIndices[subMatrixRow] = r.Shards - 2
 		for subMatrixRow, validIndex := range validIndices {
@@ -866,7 +867,20 @@ func (r *reedSolomon) reconstructLocal1(shards [][]byte) error {
 		if err != nil {
 			return err
 		}
-		r.myCodeSomeShards(dataDecodeMatrix, subShards, outputShards, outputCount, shardSize)
+		matrixRows := make([][]byte, r.ParityShards)
+		for iShard := 0; iShard < r.DataShards/2; iShard++ {
+			if len(shards[iShard]) == 0 {
+				if cap(shards[iShard]) >= shardSize {
+					shards[iShard] = shards[iShard][0:shardSize]
+				} else {
+					shards[iShard] = make([]byte, shardSize)
+				}
+				matrixRows[outputCount] = dataDecodeMatrix[iShard]
+				outputShards[0] = shards[iShard]
+				outputCount++
+			}
+		}
+		r.myCodeSomeShards(matrixRows, subShards, outputShards, outputCount, shardSize)
 	}
 	return nil
 }
@@ -883,7 +897,7 @@ func (r *reedSolomon) reconstructLocal2(shards [][]byte) error {
 		subShards := make([][]byte, r.DataShards/2)
 		validIndices := make([]int, r.DataShards/2)
 		outputShards := make([][]byte, 1)
-		outputCount := 1
+		outputCount := 0
 		subMatrix, err := newMatrix(r.DataShards/2, r.DataShards/2)
 		if err != nil {
 			return err
@@ -894,14 +908,15 @@ func (r *reedSolomon) reconstructLocal2(shards [][]byte) error {
 				subShards[subMatrixRow] = shards[matrixRow]
 				validIndices[subMatrixRow] = matrixRow
 				subMatrixRow++
-			} else {
-				if cap(shards[matrixRow]) >= shardSize {
-					shards[matrixRow] = shards[matrixRow][0:shardSize]
-				} else {
-					shards[matrixRow] = make([]byte, shardSize)
-				}
-				outputShards[0] = shards[matrixRow]
-			}
+			} 
+			// else {
+			// 	if cap(shards[matrixRow]) >= shardSize {
+			// 		shards[matrixRow] = shards[matrixRow][0:shardSize]
+			// 	} else {
+			// 		shards[matrixRow] = make([]byte, shardSize)
+			// 	}
+			// 	outputShards[0] = shards[matrixRow]
+			// }
 		}
 		validIndices[subMatrixRow] = r.Shards - 1
 		for subMatrixRow, validIndex := range validIndices {
@@ -914,7 +929,20 @@ func (r *reedSolomon) reconstructLocal2(shards [][]byte) error {
 		if err != nil {
 			return err
 		}
-		r.myCodeSomeShards(dataDecodeMatrix, subShards, outputShards, outputCount, shardSize)
+		matrixRows := make([][]byte, r.ParityShards)
+		for iShard := r.DataShards/2; iShard < r.DataShards; iShard++ {
+			if len(shards[iShard]) == 0 {
+				if cap(shards[iShard]) >= shardSize {
+					shards[iShard] = shards[iShard][0:shardSize]
+				} else {
+					shards[iShard] = make([]byte, shardSize)
+				}
+				matrixRows[outputCount] = dataDecodeMatrix[iShard-r.DataShards/2]
+				outputShards[0] = shards[iShard]
+				outputCount++
+			}
+		}
+		r.myCodeSomeShards(matrixRows, subShards, outputShards, outputCount, shardSize)
 	}
 	return nil
 }
@@ -928,8 +956,6 @@ func (r *reedSolomon) reconstructLocal2(shards [][]byte) error {
 // If there are too few shards to reconstruct the missing
 // ones, ErrTooFewShards will be returned.
 func (r *reedSolomon) reconstruct(shards [][]byte, dataOnly bool) error {
-	r.reconstructLocal1(shards)
-	r.reconstructLocal2(shards)
 	if len(shards) != r.Shards {
 		return ErrTooFewShards
 	}
@@ -938,7 +964,8 @@ func (r *reedSolomon) reconstruct(shards [][]byte, dataOnly bool) error {
 	if err != nil {
 		return err
 	}
-
+	r.reconstructLocal1(shards)
+	r.reconstructLocal2(shards)
 	shardSize := shardSize(shards)
 
 	// Quick check: are all of the shards present?  If so, there's
