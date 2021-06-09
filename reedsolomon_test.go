@@ -411,7 +411,7 @@ func testReconstruct(t *testing.T, o ...Option) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	shards := make([][]byte, 14+2)
+	shards := make([][]byte, 14)
 	for s := range shards {
 		shards[s] = make([]byte, perShard)
 	}
@@ -485,7 +485,7 @@ func testReconstruct(t *testing.T, o ...Option) {
 	if err != ErrTooFewShards {
 		t.Errorf("expected %v, got %v", ErrTooFewShards, err)
 	}
-	err = r.Reconstruct(make([][]byte, 13+3))
+	err = r.Reconstruct(make([][]byte, 13+1))
 	if err != ErrShardNoData {
 		t.Errorf("expected %v, got %v", ErrShardNoData, err)
 	}
@@ -785,7 +785,7 @@ func benchmarkEncode(b *testing.B, dataShards, parityShards, shardSize int) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	shards := make([][]byte, dataShards+parityShards+2)
+	shards := make([][]byte, dataShards+parityShards)
 	for s := range shards {
 		shards[s] = make([]byte, shardSize)
 	}

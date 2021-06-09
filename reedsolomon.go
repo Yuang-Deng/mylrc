@@ -159,14 +159,17 @@ func buildMatrix(dataShards, totalShards int) (matrix, error) {
 	if err != nil {
 		return vm, err
 	}
-	for c := 0; c < dataShards/2; c++ {
-		// vm[totalShards-2][c] = 1
-		vm[totalShards-1][c] = 0
+	if totalShards-dataShards > 2{
+		for c := 0; c < dataShards/2; c++ {
+			// vm[totalShards-2][c] = 1
+			vm[totalShards-1][c] = 0
+		}
+		for c := dataShards / 2; c < dataShards; c++ {
+			vm[totalShards-2][c] = 0
+			// vm[totalShards-1][c] = 1
+		}
 	}
-	for c := dataShards / 2; c < dataShards; c++ {
-		vm[totalShards-2][c] = 0
-		// vm[totalShards-1][c] = 1
-	}
+	
 	return vm, nil
 }
 
@@ -254,10 +257,18 @@ func buildXorMatrix(dataShards, totalShards int) (matrix, error) {
 func New(dataShards, parityShards int, opts ...Option) (Encoder, error) {
 	r := reedSolomon{
 		DataShards:   dataShards,
-		ParityShards: parityShards + 2,
-		Shards:       dataShards + parityShards + 2,
+		ParityShards: parityShards,
+		Shards:       dataShards + parityShards,
 		o:            defaultOptions,
 	}
+	// if parityShards > 2 {
+	// 	r = reedSolomon{
+	// 		DataShards:   dataShards,
+	// 		ParityShards: parityShards - 2,
+	// 		Shards:       dataShards + parityShards,
+	// 		o:            defaultOptions,
+	// 	}
+	// }
 
 	for _, opt := range opts {
 		opt(&r.o)
@@ -266,7 +277,7 @@ func New(dataShards, parityShards int, opts ...Option) (Encoder, error) {
 		return nil, ErrInvShardNum
 	}
 
-	parityShards=parityShards+2
+	// parityShards=parityShards-2
 	if dataShards+parityShards > 256 {
 		return nil, ErrMaxShardNum
 	}
@@ -863,6 +874,9 @@ func (r *reedSolomon) reconstructLocal1(shards [][]byte) error {
 			}
 		}
 		subShards[(r.DataShards/2)-1] = shards[r.Shards-2]
+		if subShards[(r.DataShards/2)-1] == nil {
+			return nil
+		}
 		dataDecodeMatrix, err := subMatrix.Invert()
 		if err != nil {
 			return err
@@ -925,6 +939,9 @@ func (r *reedSolomon) reconstructLocal2(shards [][]byte) error {
 			}
 		}
 		subShards[(r.DataShards/2)-1] = shards[r.Shards-1]
+		if subShards[(r.DataShards/2)-1] == nil {
+			return nil
+		}
 		dataDecodeMatrix, err := subMatrix.Invert()
 		if err != nil {
 			return err
@@ -964,8 +981,10 @@ func (r *reedSolomon) reconstruct(shards [][]byte, dataOnly bool) error {
 	if err != nil {
 		return err
 	}
-	r.reconstructLocal1(shards)
-	r.reconstructLocal2(shards)
+	if r.ParityShards > 2 {
+		r.reconstructLocal1(shards)
+		r.reconstructLocal2(shards)
+	}
 	shardSize := shardSize(shards)
 
 	// Quick check: are all of the shards present?  If so, there's
