@@ -1,4 +1,4 @@
-module github.com/klauspost/reedsolomon/_gen
+module github.com/hattrickcr7/mylrc/_gen
 
 go 1.14
 

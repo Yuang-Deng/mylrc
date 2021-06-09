@@ -7,7 +7,7 @@
 
 // Package reedsolomon enables Erasure Coding in Go
 //
-// For usage and examples, see https://github.com/klauspost/reedsolomon
+// For usage and examples, see github.com/hattrickcr7/mylrc
 //
 package reedsolomon
 
